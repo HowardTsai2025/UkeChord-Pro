@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UkeHoward Liquid</title>
+    <style>
+        /* --- APPLE LIQUID GLASS DESIGN --- */
+        :root {
+            /* Apple System Colors */
+            --system-gray-bg: #F2F2F7;
+            --glass-material: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --text-primary: #1D1D1F;
+            --text-secondary: #86868B;
+            --accent-color: #FF9500; /* Apple System Orange */
+            --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.04);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--system-gray-bg);
+            /* Subtle breathing room */
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-primary);
+        }
+
+        /* Main Card */
+        .glass-card {
+            width: 100%;
+            max-width: 360px;
+            background: var(--glass-material);
+            /* The "Liquid Glass" Blur Effect */
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border-radius: 28px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-soft);
+            padding: 32px 24px;
+            text-align: center;
+        }
+
+        h1 {
+            font-weight: 600;
+            font-size: 24px;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            font-weight: 400;
+        }
+
+        /* Controls Section */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            margin-left: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .select-wrapper {
+            position: relative;
+        }
+
+        select {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: none;
+            /* Pure white for inputs to contrast with glass */
+            background-color: #FFFFFF;
+            color: var(--text-primary);
+            font-size: 16px;
+            font-weight: 500;
+            outline: none;
+            appearance: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            transition: box-shadow 0.2s;
+        }
+
+        select:focus {
+            box-shadow: 0 0 0 2px var(--accent-color);
+        }
+
+        /* Custom Chevron */
+        .select-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-60%) rotate(45deg);
+            width: 6px;
+            height: 6px;
+            border-right: 2px solid var(--text-secondary);
+            border-bottom: 2px solid var(--text-secondary);
+            pointer-events: none;
+        }
+
+        /* Canvas Area */
+        .canvas-container {
+            background: #FFFFFF;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03);
+            display: flex;
+            justify-content: center;
+        }
+
+        #chordCanvas {
+            display: block;
+            width: 200px;
+            height: 240px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glass-card">
+        <h1>UkeHoward</h1>
+        <div class="subtitle">Chord Dictionary</div>
+
+        <div class="controls">
+            <div class="input-group">
+                <label>Root Note</label>
+                <div class="select-wrapper">
+                    <select id="rootSelect"></select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Chord Type</label>
+                <div class="select-wrapper">
+                    <select id="typeSelect"></select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Tuning</label>
+                <div class="select-wrapper">
+                    <select id="tuningSelect">
+                        <option value="GCEA">Standard (GCEA)</option>
+                        <option value="DGBE">Baritone (DGBE)</option>
+                        <option value="ADF#B">D-Tuning (ADF#B)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="chordCanvas" width="400" height="480"></canvas>
+        </div>
+    </div>
+
+    <script>
+        /* --- JAVASCRIPT LOGIC (No Audio) --- */
+        
+        // 1. Setup & Data
+        const roots = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        const chordFormulas = {
+            "Major": [0, 4, 7], "Minor": [0, 3, 7], "7": [0, 4, 7, 10],
+            "Major 7": [0, 4, 7, 11], "Minor 7": [0, 3, 7, 10], "Dim": [0, 3, 6], "Aug": [0, 4, 8]
+        };
+        const noteMap = {}; 
+        roots.forEach((n, i) => noteMap[n] = i);
+
+        // Tuning Definitions
+        const tunings = { "GCEA": [7, 0, 4, 9], "DGBE": [2, 7, 11, 4], "ADF#B": [9, 2, 6, 11] };
+
+        // 2. The Dictionary (Common Human Fingerings)
+        const chordLibrary = {
+            "GCEA": {
+                "C Major": [0,0,0,3], "C Minor": [0,3,3,3], "C 7": [0,0,0,1],
+                "D Major": [2,2,2,0], "D Minor": [2,2,1,0], "D 7": [2,0,2,0],
+                "E Major": [4,4,4,2], "E Minor": [0,4,3,2], "E 7": [1,2,0,2],
+                "F Major": [2,0,1,0], "F Minor": [1,0,1,3], "F 7": [2,3,1,0],
+                "G Major": [0,2,3,2], "G Minor": [0,2,3,1], "G 7": [0,2,1,2],
+                "A Major": [2,1,0,0], "A Minor": [2,0,0,0], "A 7": [0,1,0,0],
+                "B Major": [4,3,2,2], "B Minor": [4,2,2,2], "B 7": [2,3,2,2]
+            }
+        };
+
+        // UI References
+        const rootSel = document.getElementById('rootSelect');
+        const typeSel = document.getElementById('typeSelect');
+        const tuningSel = document.getElementById('tuningSelect');
+        const canvas = document.getElementById('chordCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Populate Dropdowns
+        roots.forEach(r => rootSel.add(new Option(r, r)));
+        Object.keys(chordFormulas).forEach(t => typeSel.add(new Option(t, t)));
+
+        // 3. Logic Engine
+        function calculateChord() {
+            const rootName = rootSel.value;
+            const chordType = typeSel.value;
+            const tuningName = tuningSel.value;
+            const chordKey = `${rootName} ${chordType}`;
+            let frets;
+
+            // Check Dictionary
+            if (chordLibrary[tuningName] && chordLibrary[tuningName][chordKey]) {
+                frets = chordLibrary[tuningName][chordKey];
+            } else {
+                // Calculate
+                const tuning = tunings[tuningName];
+                const targetNotes = chordFormulas[chordType].map(i => (noteMap[rootName] + i) % 12);
+                frets = tuning.map(openNote => {
+                    for (let f = 0; f <= 5; f++) {
+                        if (targetNotes.includes((openNote + f) % 12)) return f;
+                    }
+                    return 0;
+                });
+            }
+            drawChord(frets);
+        }
+
+        // 4. Retina Drawing Engine
+        function drawChord(frets) {
+            // Clear canvas
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const marginX = 60;
+            const marginY = 60;
+            const contentW = w - (marginX * 2);
+            const contentH = h - (marginY * 2);
+            
+            const stringSpacing = contentW / 3;
+            const fretSpacing = contentH / 5; // 5 spaces for nut + 4 frets
+
+            ctx.lineCap = "round";
+
+            // Draw Nut (Top thick line)
+            ctx.beginPath();
+            ctx.moveTo(marginX, marginY);
+            ctx.lineTo(w - marginX, marginY);
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = "#1D1D1F";
+            ctx.stroke();
+
+            // Draw Frets (Horizontal)
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "#E5E5EA"; // Very light gray for frets
+            for (let i = 1; i <= 4; i++) {
+                const y = marginY + (i * fretSpacing);
+                ctx.beginPath();
+                ctx.moveTo(marginX, y);
+                ctx.lineTo(w - marginX, y);
+                ctx.stroke();
+            }
+
+            // Draw Strings (Vertical)
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = "#1D1D1F"; // Dark strings
+            for (let i = 0; i < 4; i++) {
+                const x = marginX + (i * stringSpacing);
+                ctx.beginPath();
+                ctx.moveTo(x, marginY);
+                ctx.lineTo(x, h - marginY); // Extend a bit
+                ctx.stroke();
+            }
+
+            // Draw Dots (Fingers)
+            frets.forEach((fret, i) => {
+                const x = marginX + (i * stringSpacing);
+                
+                if (fret > 0) {
+                    // Finger position
+                    const y = marginY + (fret * fretSpacing) - (fretSpacing / 2);
+                    
+                    // Draw Outer Circle (White border for contrast)
+                    ctx.beginPath();
+                    ctx.arc(x, y, 28, 0, 2 * Math.PI);
+                    ctx.fillStyle = "#FFFFFF";
+                    ctx.fill();
+
+                    // Draw Inner Circle (Orange)
+                    ctx.beginPath();
+                    ctx.arc(x, y, 24, 0, 2 * Math.PI);
+                    ctx.fillStyle = "#FF9500"; // Apple Orange
+                    ctx.fill();
+                } else {
+                    // Open String Indicator (Empty circle above nut)
+                    ctx.beginPath();
+                    ctx.arc(x, marginY - 25, 10, 0, 2 * Math.PI);
+                    ctx.strokeStyle = "#86868B";
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+            });
+        }
+
+        // Listeners
+        rootSel.addEventListener('change', calculateChord);
+        typeSel.addEventListener('change', calculateChord);
+        tuningSel.addEventListener('change', calculateChord);
+
+        // Init
+        calculateChord();
+    </script>
+</body>
+</html>
